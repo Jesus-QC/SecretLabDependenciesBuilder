@@ -81,6 +81,7 @@ public static class ServerDownloader
         }
         
         AssembliesPublicizer.RunPublicizer(installationDirectory.GetDirectories()[1].GetDirectories()[0]);
+        
         installationDirectory.Delete(true);
     }
 }

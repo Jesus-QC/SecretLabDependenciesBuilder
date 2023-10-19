@@ -26,12 +26,14 @@ public static class AssembliesPublicizer
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("Done!");
 
-        ZipFile.CreateFromDirectory(directoryInfo.FullName, Path.Combine(Environment.CurrentDirectory, "References.zip"));
+        string zipFile = Path.Combine(Environment.CurrentDirectory, "References.zip");
+        File.Delete(zipFile);
+        ZipFile.CreateFromDirectory(directoryInfo.FullName, zipFile);
     }
 
     private static void PublicizeAssembly(FileSystemInfo file, FileSystemInfo referencesDirectory)
     {
-        DefaultAssemblyResolver resolver = new ();
+        using DefaultAssemblyResolver resolver = new ();
         resolver.AddSearchDirectory(referencesDirectory.FullName);
         
         using ModuleDefinition assembly = ModuleDefinition.ReadModule(file.FullName, new ReaderParameters
