@@ -12,14 +12,14 @@ public static class ServerDownloader
     {
         RepeatFromBeginning:
         Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine("Write the server branch or beta name, let it blank for none.");
+        Console.WriteLine("Enter the server branch or beta name, leave it blank for none.");
         Console.ForegroundColor = ConsoleColor.White;
         _beta = Console.ReadLine();
 
         if (!string.IsNullOrEmpty(_beta))
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("Write the server branch or beta password, let it blank for none.");
+            Console.WriteLine("Enter the server branch or beta password, leave it blank for none.");
             Console.ForegroundColor = ConsoleColor.White;
             _betaPassword = Console.ReadLine();
         }

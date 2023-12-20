@@ -4,6 +4,12 @@
 Environment.CurrentDirectory = @"D:\_Coding\Tools\SecretLabDependencyBuilder";
 #endif
 
-Console.WriteLine("███████████████████████████████████████\n█─▄▄▄▄█▄─▄█████▄─▄▄▀█▄─▄▄─█▄─▄▄─█─▄▄▄▄█\n█▄▄▄▄─██─██▀████─██─██─▄█▀██─▄▄▄█▄▄▄▄─█\n▀▄▄▄▄▄▀▄▄▄▄▄▀▀▀▄▄▄▄▀▀▄▄▄▄▄▀▄▄▄▀▀▀▄▄▄▄▄▀\nMade by Jesus-QC\n");
+Console.WriteLine("""
+                  ███████████████████████████████████████
+                  █─▄▄▄▄█▄─▄█████▄─▄▄▀█▄─▄▄─█▄─▄▄─█─▄▄▄▄█
+                  █▄▄▄▄─██─██▀████─██─██─▄█▀██─▄▄▄█▄▄▄▄─█
+                  ▀▄▄▄▄▄▀▄▄▄▄▄▀▀▀▄▄▄▄▀▀▄▄▄▄▄▀▄▄▄▀▀▀▄▄▄▄▄▀
+                  Made by Jesus-QC
+                  """);
 
 await SecretLabDependenciesBuilder.ServerDownloader.RunAsync();
