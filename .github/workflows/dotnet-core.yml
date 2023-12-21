@@ -71,7 +71,7 @@ jobs:
       - name: Release All
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'builds/*'
+          artifacts: 'builds/*/*'
           bodyFile: ".github/release-body.md"
           commit: ${{ github.sha }}
           draft: false
