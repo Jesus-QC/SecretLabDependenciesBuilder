@@ -1,5 +1,4 @@
-using System.Diagnostics;
-using System.Text;
+using SecretLabDependenciesBuilder.Downloader;
 
 namespace SecretLabDependenciesBuilder;
 
@@ -48,38 +47,31 @@ public static class ServerDownloader
         string filesPath = Path.Combine(installationDirectory.FullName, "files.txt");
         await File.WriteAllTextAsync(filesPath, "regex:SCPSL_Data/Managed/*");
 
-        StringBuilder cmd =
-            new(
-                $"depotdownloader/DepotDownloader.dll -app 996560 -filelist \"{filesPath}\" -dir \"{installationDirectory.FullName}\" ");
+        ArgumentBuilder args = new ArgumentBuilder()
+            .AddArgument("-app", "996560")
+            .AddArgument("-filelist", filesPath)
+            .AddArgument("-dir", installationDirectory.FullName);
+
 
         if (!string.IsNullOrEmpty(_beta))
         {
-            cmd.Append("-beta " + _beta);
-
+            args.AddArgument("-beta", _beta);
+            
             if (!string.IsNullOrEmpty(_betaPassword))
-                cmd.Append("-betapassword " + _betaPassword);
+                args.AddArgument("-betapassword", _betaPassword);
         }
-
-        ProcessStartInfo pc = new()
+        
+        bool success = await Downloader.Downloader.StartWithArgs(args.Build());
+        
+        if (!success)
         {
-            FileName = "dotnet",
-            Arguments = cmd.ToString(),
-            RedirectStandardInput = true,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            WorkingDirectory = Environment.CurrentDirectory
-        };
-
-        Process? process = Process.Start(pc);
-
-        if (process is null)
-            throw new Exception(
-                "An error occurred while instantiating the download process. Make sure you have dotnet 6 runtime installed.");
-
-        while (!process.HasExited)
-        {
-            ConsoleWriter.Write(await process.StandardOutput.ReadLineAsync());
+            ConsoleWriter.Write("An error occurred while downloading the files.", ConsoleColor.Red);
+            ConsoleWriter.Write("Press any key to exit...", ConsoleColor.Red);
+            Console.ReadKey();
+            return;
         }
+        
+
 
         DirectoryInfo managedDirectory = new(Path.Combine(installationDirectory.FullName, "SCPSL_Data/Managed"));
 
