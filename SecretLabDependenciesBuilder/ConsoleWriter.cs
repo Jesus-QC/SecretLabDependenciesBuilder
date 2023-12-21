@@ -21,6 +21,6 @@ public static class ConsoleWriter
                           ▀▄▄▄▄▄▀▄▄▄▄▄▀▀▀▄▄▄▄▀▀▄▄▄▄▄▀▄▄▄▀▀▀▄▄▄▄▄▀
                           """);
         Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("Made by Jesus-QC");
+        Console.WriteLine("Made by Jesus-QC and x3rt");
     }
 }
