@@ -52,13 +52,8 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ matrix.framework }}
-          path: ${{ github.workspace }}/builds/${{ matrix.framework }}/${{ matrix.target }}
+          path: ${{ github.workspace }}/builds/${{ matrix.framework }}/${{ matrix.target }}/*{{ env.PROJECT_NAME }}*
 
-      - name: Upload ${{ matrix.target }} Build to bundle
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.PROJECT_NAME }}-all-${{ matrix.framework }}
-          path: ${{ github.workspace }}/builds/${{ matrix.framework }}
   release:
     name: Release
     needs: build
@@ -69,16 +64,14 @@ jobs:
         uses: actions/checkout@v3
       - name: Download all builds
         uses: actions/download-artifact@v3
-      - name: Zip artifacts
-        run: |
-          mkdir ./zipped
-          zip -r ./zipped/${{ env.PROJECT_NAME }}-all.zip ./${{ env.PROJECT_NAME }}-all-8.0
-          zip -r ./zipped/${{ env.PROJECT_NAME }}-linux.zip ./${{ env.PROJECT_NAME }}-linux-x64-8.0
-          zip -r ./zipped/${{ env.PROJECT_NAME }}-win.zip ./${{ env.PROJECT_NAME }}-win-x64-8.0
+        with:
+          pattern: ${{ env.PROJECT_NAME }}-*-*
+          path: builds
+          merge-multiple: true
       - name: Release All
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'zipped/${{ env.PROJECT_NAME }}-*.zip'
+          artifacts: 'builds/*'
           bodyFile: ".github/release-body.md"
           commit: ${{ github.sha }}
           draft: false
