@@ -6,4 +6,5 @@ Environment.CurrentDirectory = @"C:\Users\jesus\Documents\_Coding\SecretLabDepen
 #endif
 
 ConsoleWriter.WriteTitle();
+await ConfigManager.LoadConfigAsync();
 await ServerDownloader.RunAsync();

@@ -6,45 +6,65 @@ namespace SecretLabDependenciesBuilder;
 
 public static class AssembliesPublicizer
 {
-    private static readonly string[] AssembliesToPublicize =
-    {
-        "Assembly-CSharp.dll",
-        "Mirror.dll",
-        "PluginAPI.dll",
-    };
-    
     public static void RunPublicizer(DirectoryInfo directoryInfo)
     {
-        foreach (FileInfo file in directoryInfo.GetFiles())
+        foreach (FileInfo file in directoryInfo.GetFiles("*.dll"))
         {
-            if (!AssembliesToPublicize.Contains(file.Name))
+            if (!ConfigManager.CurrentConfig.AssembliesToPublicize.Contains(file.Name))
                 continue;
-            
+
             PublicizeAssembly(file, directoryInfo);
         }
 
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine("Done!");
+        ConsoleWriter.Write("Done", ConsoleColor.Green);
 
-        string zipFile = Path.Combine(Environment.CurrentDirectory, "References.zip");
-        File.Delete(zipFile);
+        if (ConfigManager.CurrentConfig.SaveReferencesToFolder)
+            SaveReferencesToFolder(directoryInfo);
+
+        if (ConfigManager.CurrentConfig.ZipReferences)
+            SaveReferencesToZip(directoryInfo);
+    }
+
+    private static void SaveReferencesToFolder(DirectoryInfo directoryInfo)
+    {
+        DirectoryInfo referencesDirectory = new DirectoryInfo(ConfigManager.CurrentConfig.ReferencesFolderName);
+        if (!referencesDirectory.Exists)
+            referencesDirectory.Create();
+
+        foreach (FileInfo file in directoryInfo.GetFiles())
+        {
+            file.CopyTo(Path.Combine(referencesDirectory.FullName, file.Name), true);
+        }
+    }
+
+    private static void SaveReferencesToZip(DirectoryInfo directoryInfo)
+    {
+        string zipFile = ConfigManager.CurrentConfig.ReferencesZipName;
+        if (File.Exists(zipFile))
+            File.Delete(zipFile);
+
+        // create directory if it doesn't exist
+        new FileInfo(zipFile).Directory?.Create();
+
+
         ZipFile.CreateFromDirectory(directoryInfo.FullName, zipFile);
     }
 
     private static void PublicizeAssembly(FileSystemInfo file, FileSystemInfo referencesDirectory)
     {
-        using DefaultAssemblyResolver resolver = new ();
+        using DefaultAssemblyResolver resolver = new();
         resolver.AddSearchDirectory(referencesDirectory.FullName);
-        
+
         using ModuleDefinition assembly = ModuleDefinition.ReadModule(file.FullName, new ReaderParameters
         {
             AssemblyResolver = resolver,
             ReadWrite = true
         });
-        
+
         if (assembly is null)
         {
-            Console.WriteLine($"[Publicizer] Assembly in {file.FullName} not found. Could not patch.");
+            ConsoleWriter.Write($"[Publicizer] Assembly in {file.FullName} not found. Could not patch.",
+                ConsoleColor.Red);
             return;
         }
 
@@ -54,7 +74,7 @@ public static class AssembliesPublicizer
 
             foreach (FieldDefinition field in type.Fields)
                 field.IsPublic = true;
-            
+
             foreach (MethodDefinition method in type.Methods)
                 method.IsPublic = true;
 
@@ -62,7 +82,7 @@ public static class AssembliesPublicizer
             {
                 if (property.GetMethod != null)
                     property.GetMethod.IsPublic = true;
-                
+
                 if (property.SetMethod != null)
                     property.SetMethod.IsPublic = true;
             }
@@ -71,12 +91,12 @@ public static class AssembliesPublicizer
             {
                 eventDefinition.AddMethod.IsPublic = true;
                 eventDefinition.RemoveMethod.IsPublic = true;
-                
+
                 if (eventDefinition.InvokeMethod != null)
                     eventDefinition.InvokeMethod.IsPublic = true;
             }
         }
-        
+
         assembly.Write(file.FullName[..^4] + "-Publicized.dll");
     }
 }
