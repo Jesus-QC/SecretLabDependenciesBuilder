@@ -34,8 +34,8 @@ public class ArgumentBuilder
         StringBuilder builder = new();
         foreach (Argument argument in _arguments)
         {
-            builder.Append(argument.ToString());
-            builder.Append(" ");
+            builder.Append(argument);
+            builder.Append(' ');
         }
 
         return builder.ToString();
