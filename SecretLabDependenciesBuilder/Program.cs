@@ -9,7 +9,7 @@ Console.WriteLine("""
                   █─▄▄▄▄█▄─▄█████▄─▄▄▀█▄─▄▄─█▄─▄▄─█─▄▄▄▄█
                   █▄▄▄▄─██─██▀████─██─██─▄█▀██─▄▄▄█▄▄▄▄─█
                   ▀▄▄▄▄▄▀▄▄▄▄▄▀▀▀▄▄▄▄▀▀▄▄▄▄▄▀▄▄▄▀▀▀▄▄▄▄▄▀
-                  Made by Jesus-QC
+                  Made by Jesus-QC and x3rt
                   """);
 
 await SecretLabDependenciesBuilder.ServerDownloader.RunAsync();
