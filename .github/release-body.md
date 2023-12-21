@@ -1,0 +1,2 @@
+### Added
+- Configuration system
