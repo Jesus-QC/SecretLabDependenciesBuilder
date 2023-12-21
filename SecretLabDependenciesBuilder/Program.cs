@@ -1,7 +1,7 @@
 ﻿// All in one - Server Downloader and Publicizer.
 
 #if DEBUG
-Environment.CurrentDirectory = @"D:\_Coding\Tools\SecretLabDependencyBuilder";
+Environment.CurrentDirectory = @"C:\Users\jesus\Documents\_Coding\SecretLabDependencyBuilder";
 #endif
 
 Console.WriteLine("""
