@@ -63,6 +63,7 @@ jobs:
     name: Release
     needs: build
     runs-on: ubuntu-20.04
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -76,7 +77,6 @@ jobs:
           zip -r ./zipped/${{ env.PROJECT_NAME }}-win-x64.zip ./${{ env.PROJECT_NAME }}-win-x64-7.0
       - name: Release All
         uses: ncipollo/release-action@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           artifacts: 'zipped/${{ env.PROJECT_NAME }}-*.zip'
           bodyFile: ".github/release-body.md"
