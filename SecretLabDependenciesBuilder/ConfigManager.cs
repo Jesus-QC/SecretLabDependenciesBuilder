@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using YamlDotNet.Serialization;
 
 namespace SecretLabDependenciesBuilder;
@@ -12,7 +12,7 @@ public static class ConfigManager
         CurrentConfig = await GetConfigAsync();
     }
 
-    private static async Task<Config> GetConfigAsync()
+    private static async Task<Config> GetConfigAsync(bool retry = true)
     {
         string configPath = Path.Combine(Environment.CurrentDirectory, "config.yml");
         if (!File.Exists(configPath))
@@ -26,7 +26,8 @@ public static class ConfigManager
             Console.ReadKey();
             Console.Clear();
 
-            return new Config();
+            // ReSharper disable once TailRecursiveCall
+            return await GetConfigAsync(false);
         }
 
         return new DeserializerBuilder().Build().Deserialize<Config>(await File.ReadAllTextAsync(configPath))!;
