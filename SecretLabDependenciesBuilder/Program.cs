@@ -1,11 +1,7 @@
-﻿// All in one - Server Downloader and Publicizer.
+// All in one - Server Downloader and Publicizer.
 
-Console.WriteLine("""
-                  ███████████████████████████████████████
-                  █─▄▄▄▄█▄─▄█████▄─▄▄▀█▄─▄▄─█▄─▄▄─█─▄▄▄▄█
-                  █▄▄▄▄─██─██▀████─██─██─▄█▀██─▄▄▄█▄▄▄▄─█
-                  ▀▄▄▄▄▄▀▄▄▄▄▄▀▀▀▄▄▄▄▀▀▄▄▄▄▄▀▄▄▄▀▀▀▄▄▄▄▄▀
-                  Made by Jesus-QC and x3rt
-                  """);
+using SecretLabDependenciesBuilder;
 
-await SecretLabDependenciesBuilder.ServerDownloader.RunAsync();
+ConsoleWriter.WriteTitle();
+await ConfigManager.LoadConfigAsync();
+await ServerDownloader.RunAsync();
