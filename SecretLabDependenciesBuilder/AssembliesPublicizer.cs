@@ -89,6 +89,8 @@ public static class AssembliesPublicizer
 
             foreach (EventDefinition eventDefinition in type.Events)
             {
+                CheckForBackfields(eventDefinition);
+                
                 eventDefinition.AddMethod.IsPublic = true;
                 eventDefinition.RemoveMethod.IsPublic = true;
 
@@ -98,5 +100,21 @@ public static class AssembliesPublicizer
         }
 
         assembly.Write(file.FullName[..^4] + "-Publicized.dll");
+    }
+
+    // Basically we are checking for fields with the same name as the event,
+    // if there is any field with the same name then we make the field private,
+    // ironically privatizing the field instead of publicizing it,
+    // but needs to be done so the events we are publicizing can be used without
+    // any ambitious reference issue.
+    private static void CheckForBackfields(EventDefinition eventDefinition)
+    {
+        foreach (FieldDefinition fieldDefinition in eventDefinition.DeclaringType.Fields)
+        {
+            if (fieldDefinition.Name != eventDefinition.Name)
+                continue;
+
+            fieldDefinition.IsPrivate = true;
+        }
     }
 }
