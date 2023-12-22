@@ -12,7 +12,7 @@ public static class ConfigManager
         CurrentConfig = await GetConfigAsync();
     }
 
-    private static async Task<Config> GetConfigAsync(bool retry = true)
+    private static async Task<Config> GetConfigAsync()
     {
         string configPath = Path.Combine(Environment.CurrentDirectory, "config.yml");
         if (!File.Exists(configPath))
@@ -27,7 +27,7 @@ public static class ConfigManager
             Console.Clear();
 
             // ReSharper disable once TailRecursiveCall
-            return await GetConfigAsync(false);
+            return await GetConfigAsync();
         }
 
         return new DeserializerBuilder().Build().Deserialize<Config>(await File.ReadAllTextAsync(configPath))!;
