@@ -12,4 +12,6 @@ An all in one publicizer and assembly downloader for the game scpsl, made for mo
 | SaveReferencesToFolder | Boolean  | Flag to indicate whether to save references to a folder | `false`                                                  |
 | ReferencesFolderName   | String   | Name/path of the directory to save references to        | `"References"`                                           |
 
-https://github.com/Jesus-QC/SecretLabDependenciesBuilder/assets/69375249/9fff440e-924a-4cf2-b4f9-7e2ef63ab3e6
+<p align="center">
+  <img alt="SecretLabDependenciesBuilder Development" src="https://repobeats.axiom.co/api/embed/f86657cc16c3957b14e72f52d33c2c0a1eec4fd9.svg">
+</p>
