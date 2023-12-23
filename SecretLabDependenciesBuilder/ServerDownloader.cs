@@ -52,17 +52,16 @@ public static class ServerDownloader
             .AddArgument("-filelist", filesPath)
             .AddArgument("-dir", installationDirectory.FullName);
 
-
         if (!string.IsNullOrEmpty(_beta))
         {
             args.AddArgument("-beta", _beta);
-            
+
             if (!string.IsNullOrEmpty(_betaPassword))
                 args.AddArgument("-betapassword", _betaPassword);
         }
-        
+
         bool success = await Downloader.Downloader.StartWithArgs(args.Build());
-        
+
         if (!success)
         {
             ConsoleWriter.Write("An error occurred while downloading the files.", ConsoleColor.Red);
@@ -70,8 +69,6 @@ public static class ServerDownloader
             Console.ReadKey();
             return;
         }
-        
-
 
         DirectoryInfo managedDirectory = new(Path.Combine(installationDirectory.FullName, "SCPSL_Data/Managed"));
 
