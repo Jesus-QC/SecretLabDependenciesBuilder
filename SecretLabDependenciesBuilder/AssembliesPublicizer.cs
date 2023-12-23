@@ -70,7 +70,15 @@ public static class AssembliesPublicizer
 
         foreach (TypeDefinition type in assembly.GetAllTypes())
         {
-            type.IsPublic = true;
+            switch (type.IsNested)
+            {
+                case false:
+                    type.IsPublic = true;
+                    break;
+                case true:
+                    type.IsNestedPublic = true;
+                    break;
+            }
 
             foreach (FieldDefinition field in type.Fields)
                 field.IsPublic = true;
@@ -90,7 +98,7 @@ public static class AssembliesPublicizer
             foreach (EventDefinition eventDefinition in type.Events)
             {
                 CheckForBackfields(eventDefinition);
-                
+
                 eventDefinition.AddMethod.IsPublic = true;
                 eventDefinition.RemoveMethod.IsPublic = true;
 
