@@ -1,4 +1,4 @@
-using SecretLabDependenciesBuilder.Downloader;
+using DepotDownloader;
 
 namespace SecretLabDependenciesBuilder;
 
@@ -47,20 +47,27 @@ public static class ServerDownloader
         string filesPath = Path.Combine(installationDirectory.FullName, "files.txt");
         await File.WriteAllTextAsync(filesPath, "regex:SCPSL_Data/Managed/*");
 
-        ArgumentBuilder args = new ArgumentBuilder()
-            .AddArgument("-app", "996560")
-            .AddArgument("-filelist", filesPath)
-            .AddArgument("-dir", installationDirectory.FullName);
+        List<string> args =
+        [
+            "-app", "996560",
+            "-filelist", filesPath,
+            "-dir", installationDirectory.FullName
+        ];
 
         if (!string.IsNullOrEmpty(_beta))
         {
-            args.AddArgument("-beta", _beta);
+            args.Add("-beta");
+            args.Add(_beta);
 
             if (!string.IsNullOrEmpty(_betaPassword))
-                args.AddArgument("-betapassword", _betaPassword);
+            {
+                args.Add("-betapassword");
+                args.Add(_betaPassword);
+            }
         }
 
-        bool success = await Downloader.Downloader.StartWithArgs(args.Build());
+
+        bool success = await DepotProgram.Main(args.ToArray()) == 0;
 
         if (!success)
         {
