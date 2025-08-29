@@ -38,7 +38,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ matrix.framework }}
-          cache: true
+          cache: false
 
       - name: Install dependencies
         run: dotnet restore -r ${{ matrix.target }} --no-locked-mode
