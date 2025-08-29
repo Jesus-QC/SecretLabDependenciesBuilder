@@ -64,7 +64,7 @@ namespace DepotDownloader
 
             var clientConfiguration = SteamConfiguration.Create(config =>
                 config
-                    .WithHttpClientFactory(HttpClientFactory.CreateHttpClient)
+                    .WithHttpClientFactory(static purpose => HttpClientFactory.CreateHttpClient())
             );
 
             this.steamClient = new SteamClient(clientConfiguration);
@@ -265,6 +265,11 @@ namespace DepotDownloader
             if (requestCode == 0)
             {
                 Console.WriteLine($"No manifest request code was returned for depot {depotId} from app {appId}, manifest {manifestId}");
+
+                if (!authenticatedUser)
+                {
+                    Console.WriteLine("Suggestion: Try logging in with -username as old manifests may not be available for anonymous accounts.");
+                }
             }
             else
             {
@@ -308,6 +313,22 @@ namespace DepotDownloader
             {
                 AppBetaPasswords[entry.Key] = entry.Value;
             }
+        }
+
+        public async Task<KeyValue> GetPrivateBetaDepotSection(uint appid, string branch)
+        {
+            if (!AppBetaPasswords.TryGetValue(branch, out var branchPassword)) // Should be filled by CheckAppBetaPassword
+            {
+                return new KeyValue();
+            }
+
+            AppTokens.TryGetValue(appid, out var accessToken); // Should be filled by RequestAppInfo
+
+            var privateBeta = await steamApps.PICSGetPrivateBeta(appid, accessToken, branch, branchPassword);
+
+            Console.WriteLine($"Retrieved private beta depot section for {appid} with result: {privateBeta.Result}");
+
+            return privateBeta.DepotSection;
         }
 
         public async Task<PublishedFileDetails> GetPublishedFileDetails(uint appId, PublishedFileID pubFile)
@@ -421,13 +442,14 @@ namespace DepotDownloader
                         try
                         {
                             _ = AccountSettingsStore.Instance.GuardData.TryGetValue(logonDetails.Username, out var guarddata);
-                            authSession = await steamClient.Authentication.BeginAuthSessionViaCredentialsAsync(new SteamKit2.Authentication.AuthSessionDetails
+                            authSession = await steamClient.Authentication.BeginAuthSessionViaCredentialsAsync(new AuthSessionDetails
                             {
+                                DeviceFriendlyName = nameof(DepotDownloader),
                                 Username = logonDetails.Username,
                                 Password = logonDetails.Password,
                                 IsPersistentSession = ContentDownloader.Config.RememberPassword,
                                 GuardData = guarddata,
-                                Authenticator = new UserConsoleAuthenticator(),
+                                Authenticator = new ConsoleAuthenticator(),
                             });
                         }
                         catch (TaskCanceledException)
@@ -449,8 +471,8 @@ namespace DepotDownloader
                         {
                             var session = await steamClient.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails
                             {
+                                DeviceFriendlyName = nameof(DepotDownloader),
                                 IsPersistentSession = ContentDownloader.Config.RememberPassword,
-                                Authenticator = new UserConsoleAuthenticator(),
                             });
 
                             authSession = session;
@@ -493,11 +515,17 @@ namespace DepotDownloader
                         if (result.NewGuardData != null)
                         {
                             AccountSettingsStore.Instance.GuardData[result.AccountName] = result.NewGuardData;
+
+                            if (ContentDownloader.Config.UseQrCode)
+                            {
+                                Console.WriteLine($"Success! Next time you can login with -username {result.AccountName} -remember-password instead of -qr.");
+                            }
                         }
                         else
                         {
                             AccountSettingsStore.Instance.GuardData.Remove(result.AccountName);
                         }
+
                         AccountSettingsStore.Instance.LoginTokens[result.AccountName] = result.RefreshToken;
                         AccountSettingsStore.Save();
                     }
@@ -678,10 +706,14 @@ namespace DepotDownloader
             using var qrGenerator = new QRCodeGenerator();
             var qrCodeData = qrGenerator.CreateQrCode(challengeUrl, QRCodeGenerator.ECCLevel.L);
             using var qrCode = new AsciiQRCode(qrCodeData);
-            var qrCodeAsAsciiArt = qrCode.GetGraphic(1, drawQuietZones: false);
+            var qrCodeAsAsciiArt = qrCode.GetLineByLineGraphic(1, drawQuietZones: true);
 
             Console.WriteLine("Use the Steam Mobile App to sign in with this QR code:");
-            Console.WriteLine(qrCodeAsAsciiArt);
+
+            foreach (var line in qrCodeAsAsciiArt)
+            {
+                Console.WriteLine(line);
+            }
         }
     }
 }

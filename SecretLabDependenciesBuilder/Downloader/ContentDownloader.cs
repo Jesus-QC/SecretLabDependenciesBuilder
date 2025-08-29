@@ -231,59 +231,55 @@ namespace DepotDownloader
             }
 
             var manifests = depotChild["manifests"];
-            var manifests_encrypted = depotChild["encryptedmanifests"];
 
-            if (manifests.Children.Count == 0 && manifests_encrypted.Children.Count == 0)
+            if (manifests.Children.Count == 0)
                 return INVALID_MANIFEST_ID;
 
             var node = manifests[branch]["gid"];
 
-            if (node == KeyValue.Invalid && !string.Equals(branch, DEFAULT_BRANCH, StringComparison.OrdinalIgnoreCase))
+            // Non passworded branch, found the manifest
+            if (node.Value != null)
+                return ulong.Parse(node.Value);
+
+            // If we requested public branch and it had no manifest, nothing to do
+            if (string.Equals(branch, DEFAULT_BRANCH, StringComparison.OrdinalIgnoreCase))
+                return INVALID_MANIFEST_ID;
+
+            // Either the branch just doesn't exist, or it has a password
+            if (string.IsNullOrEmpty(Config.BetaPassword))
             {
-                var node_encrypted = manifests_encrypted[branch];
-                if (node_encrypted != KeyValue.Invalid)
-                {
-                    var password = Config.BetaPassword;
-                    while (string.IsNullOrEmpty(password))
-                    {
-                        Console.Write("Please enter the password for branch {0}: ", branch);
-                        Config.BetaPassword = password = Console.ReadLine();
-                    }
-
-                    var encrypted_gid = node_encrypted["gid"];
-
-                    if (encrypted_gid != KeyValue.Invalid)
-                    {
-                        // Submit the password to Steam now to get encryption keys
-                        await steam3.CheckAppBetaPassword(appId, Config.BetaPassword);
-
-                        if (!steam3.AppBetaPasswords.TryGetValue(branch, out var appBetaPassword))
-                        {
-                            Console.WriteLine("Password was invalid for branch {0}", branch);
-                            return INVALID_MANIFEST_ID;
-                        }
-
-                        var input = Util.DecodeHexString(encrypted_gid.Value);
-                        byte[] manifest_bytes;
-                        try
-                        {
-                            manifest_bytes = Util.SymmetricDecryptECB(input, appBetaPassword);
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine("Failed to decrypt branch {0}: {1}", branch, e.Message);
-                            return INVALID_MANIFEST_ID;
-                        }
-
-                        return BitConverter.ToUInt64(manifest_bytes, 0);
-                    }
-
-                    Console.WriteLine("Unhandled depot encryption for depotId {0}", depotId);
-                    return INVALID_MANIFEST_ID;
-                }
-
+                Console.WriteLine($"Branch {branch} for depot {depotId} was not found, either it does not exist or it has a password.");
                 return INVALID_MANIFEST_ID;
             }
+
+            if (!steam3.AppBetaPasswords.ContainsKey(branch))
+            {
+                // Submit the password to Steam now to get encryption keys
+                await steam3.CheckAppBetaPassword(appId, Config.BetaPassword);
+
+                if (!steam3.AppBetaPasswords.ContainsKey(branch))
+                {
+                    Console.WriteLine($"Error: Password was invalid for branch {branch} (or the branch does not exist)");
+                    return INVALID_MANIFEST_ID;
+                }
+            }
+
+            // Got the password, request private depot section
+            // TODO: We're probably repeating this request for every depot?
+            var privateDepotSection = await steam3.GetPrivateBetaDepotSection(appId, branch);
+
+            // Now repeat the same code to get the manifest gid from depot section
+            depotChild = privateDepotSection[depotId.ToString()];
+
+            if (depotChild == KeyValue.Invalid)
+                return INVALID_MANIFEST_ID;
+
+            manifests = depotChild["manifests"];
+
+            if (manifests.Children.Count == 0)
+                return INVALID_MANIFEST_ID;
+
+            node = manifests[branch]["gid"];
 
             if (node.Value == null)
                 return INVALID_MANIFEST_ID;
@@ -333,12 +329,6 @@ namespace DepotDownloader
 
         public static void ShutdownSteam3()
         {
-            if (cdnPool != null)
-            {
-                cdnPool.Shutdown();
-                cdnPool = null;
-            }
-
             if (steam3 == null)
                 return;
 
@@ -435,7 +425,7 @@ namespace DepotDownloader
 
             if (!await AccountHasAccess(appId, appId))
             {
-                if (await steam3.RequestFreeAppLicense(appId))
+                if (steam3.steamUser.SteamID.AccountType != EAccountType.AnonUser && await steam3.RequestFreeAppLicense(appId))
                 {
                     Console.WriteLine("Obtained FreeOnDemand license for app {0}", appId);
 
@@ -552,6 +542,8 @@ namespace DepotDownloader
                 }
             }
 
+            Console.WriteLine();
+
             try
             {
                 await DownloadSteam3Async(infos).ConfigureAwait(false);
@@ -609,10 +601,17 @@ namespace DepotDownloader
                 return null;
             }
 
-            // For depots that are proxied through depotfromapp, we still need to resolve the proxy app id
+            // For depots that are proxied through depotfromapp, we still need to resolve the proxy app id, unless the app is freetodownload
             var containingAppId = appId;
             var proxyAppId = GetSteam3DepotProxyAppId(depotId, appId);
-            if (proxyAppId != INVALID_APP_ID) containingAppId = proxyAppId;
+            if (proxyAppId != INVALID_APP_ID)
+            {
+                var common = GetSteam3AppSection(appId, EAppInfoSection.Common);
+                if (common == null || !common["FreeToDownload"].AsBoolean())
+                {
+                    containingAppId = proxyAppId;
+                }
+            }
 
             return new DepotDownloadInfo(depotId, containingAppId, manifestId, branch, installDir, depotKey);
         }
@@ -660,9 +659,9 @@ namespace DepotDownloader
         {
             Ansi.Progress(Ansi.ProgressState.Indeterminate);
 
-            var cts = new CancellationTokenSource();
-            cdnPool.ExhaustedToken = cts;
+            await cdnPool.UpdateServerList();
 
+            var cts = new CancellationTokenSource();
             var downloadCounter = new GlobalDownloadCounter();
             var depotsToDownload = new List<DepotFilesData>(depots.Count);
             var allFileNamesAllDepots = new HashSet<string>();
@@ -759,7 +758,7 @@ namespace DepotDownloader
 
                         try
                         {
-                            connection = cdnPool.GetConnection(cts.Token);
+                            connection = cdnPool.GetConnection();
 
                             string cdnToken = null;
                             if (steam3.CDNAuthTokens.TryGetValue((depot.DepotId, connection.Host), out var authTokenCallbackPromise))
@@ -921,18 +920,25 @@ namespace DepotDownloader
             var files = depotFilesData.filteredFiles.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
             var networkChunkQueue = new ConcurrentQueue<(FileStreamData fileStreamData, DepotManifest.FileData fileData, DepotManifest.ChunkData chunk)>();
 
-            await Util.InvokeAsync(
-                files.Select(file => new Func<Task>(async () =>
-                    await Task.Run(() => DownloadSteam3AsyncDepotFile(cts, downloadCounter, depotFilesData, file, networkChunkQueue)))),
-                maxDegreeOfParallelism: Config.MaxDownloads
-            );
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Config.MaxDownloads,
+                CancellationToken = cts.Token
+            };
 
-            await Util.InvokeAsync(
-                networkChunkQueue.Select(q => new Func<Task>(async () =>
-                    await Task.Run(() => DownloadSteam3AsyncDepotFileChunk(cts, downloadCounter, depotFilesData,
-                        q.fileData, q.fileStreamData, q.chunk)))),
-                maxDegreeOfParallelism: Config.MaxDownloads
-            );
+            await Parallel.ForEachAsync(files, parallelOptions, async (file, cancellationToken) =>
+            {
+                await Task.Yield();
+                DownloadSteam3AsyncDepotFile(cts, downloadCounter, depotFilesData, file, networkChunkQueue);
+            });
+
+            await Parallel.ForEachAsync(networkChunkQueue, parallelOptions, async (q, cancellationToken) =>
+            {
+                await DownloadSteam3AsyncDepotFileChunk(
+                    cts, downloadCounter, depotFilesData,
+                    q.fileData, q.fileStreamData, q.chunk
+                );
+            });
 
             // Check for deleted files if updating the depot.
             if (depotFilesData.previousManifest != null)
@@ -1202,7 +1208,7 @@ namespace DepotDownloader
 
                     try
                     {
-                        connection = cdnPool.GetConnection(cts.Token);
+                        connection = cdnPool.GetConnection();
 
                         string cdnToken = null;
                         if (steam3.CDNAuthTokens.TryGetValue((depot.DepotId, connection.Host), out var authTokenCallbackPromise))
@@ -1228,6 +1234,7 @@ namespace DepotDownloader
                     catch (TaskCanceledException)
                     {
                         Console.WriteLine("Connection timeout downloading chunk {0}", chunkID);
+                        cdnPool.ReturnBrokenConnection(connection);
                     }
                     catch (SteamKitWebRequestException e)
                     {
