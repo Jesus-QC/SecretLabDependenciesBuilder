@@ -41,7 +41,7 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: dotnet restore -r ${{ matrix.target }}
+        run: dotnet restore -r ${{ matrix.target }} --no-locked-mode
 
       - name: Build
         run: dotnet publish "${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.csproj" \
