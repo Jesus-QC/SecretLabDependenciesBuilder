@@ -43,10 +43,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore -r ${{ matrix.target }}
       - name: Build
-        run: dotnet publish "${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.csproj" \
-               -r ${{ matrix.target }} -c Release \
-               -o "${{ github.workspace }}/builds/${{ matrix.framework }}/${{ matrix.target }}"
-
+        run: dotnet publish "${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.csproj" -r ${{ matrix.target }} -c Release -o "${{ github.workspace }}/builds/${{ matrix.framework }}/${{ matrix.target }}"
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
